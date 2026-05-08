@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WAR GOV UFO — The Truth Is On-Chain</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #00ff88;
+    --green-dim: #00cc6a;
+    --green-glow: rgba(0,255,136,0.3);
+    --cyan: #00eeff;
+    --red: #ff2244;
+    --dark: #030a06;
+    --darker: #010503;
+    --panel: rgba(0,255,136,0.05);
+    --border: rgba(0,255,136,0.2);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--dark);
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+
+  /* SCANLINE OVERLAY */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* STAR FIELD */
+  .stars {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .star {
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+    animation: twinkle var(--d) infinite alternate;
+  }
+  @keyframes twinkle {
+    from { opacity: 0.1; }
+    to { opacity: 0.9; }
+  }
+
+  /* HEADER */
+  header {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    padding: 3rem 2rem 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .classified-banner {
+    display: inline-block;
+    background: var(--red);
+    color: white;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem;
+    font-weight: 900;
+    letter-spacing: 0.4em;
+    padding: 0.3rem 2rem;
+    margin-bottom: 1.5rem;
+    animation: blink-red 2s infinite;
+  }
+  @keyframes blink-red {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  .logo {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(2.5rem, 8vw, 5.5rem);
+    font-weight: 900;
+    letter-spacing: 0.15em;
+    color: var(--green);
+    text-shadow: 0 0 20px var(--green-glow), 0 0 60px var(--green-glow);
+    animation: pulse-logo 3s infinite alternate;
+    line-height: 1.1;
+  }
+  @keyframes pulse-logo {
+    from { text-shadow: 0 0 20px var(--green-glow), 0 0 60px var(--green-glow); }
+    to   { text-shadow: 0 0 40px var(--green-glow), 0 0 100px var(--green-glow), 0 0 150px var(--green-glow); }
+  }
+
+  .tagline {
+    font-family: 'Exo 2', sans-serif;
+    font-size: 1.1rem;
+    color: rgba(0,255,136,0.6);
+    letter-spacing: 0.2em;
+    margin-top: 0.75rem;
+  }
+
+  .ufo-ship {
+    font-size: 5rem;
+    animation: ufo-float 4s ease-in-out infinite;
+    display: inline-block;
+    margin: 1rem 0;
+    filter: drop-shadow(0 0 20px var(--green));
+  }
+  @keyframes ufo-float {
+    0%,100% { transform: translateY(0) rotate(-3deg); }
+    50%      { transform: translateY(-18px) rotate(3deg); }
+  }
+
+  /* NAV */
+  nav {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+  }
+  nav a {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    color: var(--green);
+    text-decoration: none;
+    padding: 0.5rem 1.2rem;
+    border: 1px solid var(--border);
+    transition: all 0.2s;
+  }
+  nav a:hover {
+    background: var(--green);
+    color: var(--darker);
+  }
+
+  /* MARKETCAP TICKER */
+  .ticker-bar {
+    position: relative;
+    z-index: 10;
+    background: rgba(0,255,136,0.08);
+    border-bottom: 1px solid var(--border);
+    padding: 0.6rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .ticker-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .ticker-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    color: rgba(0,255,136,0.5);
+  }
+  .ticker-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--green);
+  }
+  .ticker-value.loading {
+    animation: blink-cursor 1s infinite;
+  }
+  @keyframes blink-cursor {
+    0%,100% { opacity:1; }
+    50% { opacity: 0.3; }
+  }
+  .live-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse-dot 1.5s infinite;
+    display: inline-block;
+    margin-right: 6px;
+  }
+  @keyframes pulse-dot {
+    0%,100% { box-shadow: 0 0 0 0 var(--green-glow); }
+    50%      { box-shadow: 0 0 0 6px transparent; }
+  }
+
+  /* SECTIONS */
+  section {
+    position: relative;
+    z-index: 10;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+  }
+
+  .section-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 1rem;
+    letter-spacing: 0.3em;
+    color: rgba(0,255,136,0.5);
+    margin-bottom: 0.4rem;
+  }
+  .section-heading {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
+    font-weight: 900;
+    color: var(--green);
+    margin-bottom: 2rem;
+    text-shadow: 0 0 20px var(--green-glow);
+  }
+
+  /* ABOUT */
+  .about-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+  @media(max-width: 600px) { .about-grid { grid-template-columns: 1fr; } }
+
+  .about-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .about-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--green), transparent);
+  }
+  .about-card h3 {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 0.15em;
+    margin-bottom: 0.75rem;
+    color: var(--cyan);
+  }
+  .about-card p {
+    font-size: 0.85rem;
+    color: rgba(0,255,136,0.7);
+    line-height: 1.8;
+  }
+
+  /* MARKETCAP SECTION */
+  .mc-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 2rem;
+    position: relative;
+    margin-bottom: 2rem;
+  }
+  .mc-panel::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border: 1px solid transparent;
+    animation: border-glow 3s infinite;
+  }
+  @keyframes border-glow {
+    0%,100% { box-shadow: 0 0 5px var(--green-glow); }
+    50%      { box-shadow: 0 0 20px var(--green-glow), inset 0 0 20px var(--green-glow); }
+  }
+  .mc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+  .mc-stat {
+    text-align: center;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    background: rgba(0,255,136,0.03);
+  }
+  .mc-stat-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    color: rgba(0,255,136,0.45);
+    margin-bottom: 0.4rem;
+  }
+  .mc-stat-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.3rem;
+    font-weight: 700;
+  }
+  .mc-stat-value.green { color: var(--green); }
+  .mc-stat-value.cyan  { color: var(--cyan);  }
+  .mc-stat-value.red   { color: var(--red);   }
+
+  .ca-box {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    border: 1px dashed var(--border);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .ca-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    color: rgba(0,255,136,0.5);
+    white-space: nowrap;
+  }
+  .ca-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.8rem;
+    color: var(--cyan);
+    word-break: break-all;
+    flex: 1;
+  }
+  .copy-btn {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    background: none;
+    border: 1px solid var(--green);
+    color: var(--green);
+    padding: 0.4rem 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .copy-btn:hover { background: var(--green); color: var(--darker); }
+
+  /* DOCUMENT LIST */
+  .doc-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+  }
+  .doc-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.8rem 1rem;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    transition: all 0.2s;
+  }
+  .doc-item:hover {
+    border-color: var(--green);
+    background: rgba(0,255,136,0.08);
+  }
+  .doc-icon {
+    font-size: 1.2rem;
+    min-width: 1.5rem;
+    text-align: center;
+  }
+  .doc-name {
+    flex: 1;
+    font-size: 0.8rem;
+    color: rgba(0,255,136,0.85);
+  }
+  .doc-size {
+    font-size: 0.65rem;
+    color: rgba(0,255,136,0.4);
+    white-space: nowrap;
+  }
+  .doc-tag {
+    font-size: 0.55rem;
+    letter-spacing: 0.1em;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid;
+    white-space: nowrap;
+  }
+  .doc-tag.pdf   { color: #ff8844; border-color: #ff884455; }
+  .doc-tag.img   { color: var(--cyan); border-color: rgba(0,238,255,0.35); }
+  .doc-tag.gov   { color: var(--green); border-color: var(--border); }
+
+  /* GALLERY */
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .gallery-item {
+    border: 1px solid var(--border);
+    overflow: hidden;
+    position: relative;
+    aspect-ratio: 4/3;
+    background: rgba(0,255,136,0.03);
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  .gallery-item:hover {
+    border-color: var(--green);
+    box-shadow: 0 0 20px var(--green-glow);
+  }
+  .gallery-item img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    filter: sepia(20%) hue-rotate(80deg) saturate(0.7);
+    transition: filter 0.3s;
+  }
+  .gallery-item:hover img {
+    filter: sepia(10%) hue-rotate(80deg) saturate(1.1);
+  }
+  .gallery-caption {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(3,10,6,0.9);
+    padding: 0.4rem 0.6rem;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    color: rgba(0,255,136,0.7);
+    transform: translateY(100%);
+    transition: transform 0.2s;
+  }
+  .gallery-item:hover .gallery-caption { transform: translateY(0); }
+
+  .gallery-placeholder {
+    width: 100%; height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: rgba(0,255,136,0.3);
+    font-size: 2rem;
+  }
+  .gallery-placeholder span {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    margin-top: 0.5rem;
+  }
+
+  /* DOWNLOAD SECTION */
+  .download-panel {
+    background: rgba(0,255,136,0.05);
+    border: 2px solid var(--green);
+    padding: 2.5rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .download-panel::before, .download-panel::after {
+    content: '>>> DECLASSIFIED <<<';
+    position: absolute;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    color: rgba(0,255,136,0.15);
+    top: 50%;
+    white-space: nowrap;
+  }
+  .download-panel::before { left: -5rem; transform: rotate(-90deg); }
+  .download-panel::after  { right: -5rem; transform: rotate(90deg); }
+
+  .download-size {
+    font-size: 0.75rem;
+    color: rgba(0,255,136,0.5);
+    letter-spacing: 0.15em;
+    margin-bottom: 0.5rem;
+  }
+  .download-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.4rem;
+    font-weight: 900;
+    color: var(--green);
+    margin-bottom: 0.5rem;
+  }
+  .download-sub {
+    font-size: 0.8rem;
+    color: rgba(0,255,136,0.55);
+    margin-bottom: 2rem;
+    letter-spacing: 0.05em;
+  }
+  .download-btn {
+    display: inline-block;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: var(--darker);
+    background: var(--green);
+    border: none;
+    padding: 1rem 3rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+    animation: btn-pulse 2.5s infinite;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  }
+  @keyframes btn-pulse {
+    0%,100% { box-shadow: 0 0 15px var(--green-glow); }
+    50%      { box-shadow: 0 0 35px var(--green-glow), 0 0 60px var(--green-glow); }
+  }
+  .download-btn:hover {
+    background: var(--cyan);
+    transform: scale(1.05);
+  }
+  .file-count {
+    margin-top: 1.5rem;
+    font-size: 0.65rem;
+    color: rgba(0,255,136,0.35);
+    letter-spacing: 0.15em;
+  }
+
+  /* HOW TO BUY */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+  .step {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    padding: 1.5rem;
+    position: relative;
+  }
+  .step-num {
+    font-family: 'Orbitron', monospace;
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: rgba(0,255,136,0.12);
+    position: absolute;
+    top: 0.5rem; right: 0.75rem;
+    line-height: 1;
+  }
+  .step h3 {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    color: var(--cyan);
+    margin-bottom: 0.5rem;
+  }
+  .step p {
+    font-size: 0.8rem;
+    color: rgba(0,255,136,0.65);
+    line-height: 1.7;
+  }
+
+  /* FOOTER */
+  footer {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    padding: 2rem;
+    border-top: 1px solid var(--border);
+    margin-top: 2rem;
+  }
+  footer p {
+    font-size: 0.7rem;
+    color: rgba(0,255,136,0.35);
+    line-height: 1.8;
+  }
+
+  /* LIGHTBOX */
+  .lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(3,10,6,0.97);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox img {
+    max-width: 90vw;
+    max-height: 80vh;
+    object-fit: contain;
+    border: 1px solid var(--green);
+    box-shadow: 0 0 40px var(--green-glow);
+  }
+  .lightbox-close {
+    position: absolute;
+    top: 1.5rem; right: 2rem;
+    font-family: 'Orbitron', monospace;
+    font-size: 1.5rem;
+    color: var(--green);
+    cursor: pointer;
+    background: none;
+    border: none;
+  }
+  .lightbox-caption {
+    margin-top: 1rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    color: rgba(0,255,136,0.6);
+  }
+
+  /* GLITCH */
+  .glitch {
+    position: relative;
+  }
+  .glitch::before, .glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+  }
+  .glitch::before {
+    color: var(--cyan);
+    clip-path: polygon(0 30%, 100% 30%, 100% 50%, 0 50%);
+    animation: glitch-1 4s infinite;
+  }
+  .glitch::after {
+    color: var(--red);
+    clip-path: polygon(0 60%, 100% 60%, 100% 70%, 0 70%);
+    animation: glitch-2 4s infinite;
+  }
+  @keyframes glitch-1 {
+    0%,90%,100% { transform: none; opacity: 0; }
+    92% { transform: translateX(-4px); opacity: 0.7; }
+    94% { transform: translateX(4px); opacity: 0.7; }
+    96% { transform: none; opacity: 0; }
+  }
+  @keyframes glitch-2 {
+    0%,88%,100% { transform: none; opacity: 0; }
+    90% { transform: translateX(4px); opacity: 0.7; }
+    92% { transform: translateX(-4px); opacity: 0.7; }
+    94% { transform: none; opacity: 0; }
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- STARS -->
+<div class="stars" id="stars"></div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()">&#x2715;</button>
+  <img id="lightbox-img" src="" alt="">
+  <div class="lightbox-caption" id="lightbox-cap"></div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="classified-banner">&#9632; TOP SECRET // DECLASSIFIED &#9632;</div>
+  <div class="ufo-ship">&#128760;</div>
+  <h1 class="logo glitch" data-text="WAR GOV UFO">WAR GOV UFO</h1>
+  <p class="tagline">THE TRUTH IS ON-CHAIN &nbsp;|&nbsp; THEY CAN'T HIDE IT ANYMORE</p>
+</header>
+
+<!-- NAV -->
+<nav>
+  <a href="#about">ABOUT</a>
+  <a href="#marketcap">MARKET DATA</a>
+  <a href="#gallery">GALLERY</a>
+  <a href="#download">UFO FILES</a>
+  <a href="#buy">HOW TO BUY</a>
+</nav>
+
+<!-- TICKER -->
+<div class="ticker-bar">
+  <div style="display:flex;align-items:center;">
+    <span class="live-dot"></span>
+    <span class="ticker-label" style="font-size:0.65rem;letter-spacing:0.15em;">LIVE DATA</span>
+  </div>
+  <div class="ticker-item">
+    <div class="ticker-label">TOKEN</div>
+    <div class="ticker-value">$WGUFO</div>
+  </div>
+  <div class="ticker-item">
+    <div class="ticker-label">MARKET CAP</div>
+    <div class="ticker-value" id="tick-mc">LOADING...</div>
+  </div>
+  <div class="ticker-item">
+    <div class="ticker-label">PRICE (SOL)</div>
+    <div class="ticker-value" id="tick-price">—</div>
+  </div>
+  <div class="ticker-item">
+    <div class="ticker-label">24H CHANGE</div>
+    <div class="ticker-value" id="tick-change">—</div>
+  </div>
+</div>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="section-title">// TRANSMISSION RECEIVED</div>
+  <h2 class="section-heading">WHAT IS WAR GOV UFO?</h2>
+  <div class="about-grid">
+    <div class="about-card">
+      <h3>&#9993; THE MISSION</h3>
+      <p>WAR GOV UFO ($WGUFO) is the first meme coin backed by actual declassified government UFO files. We didn't just ape into a jpeg — we weaponized the FOIA database. The government spilled the truth. We put it on-chain.</p>
+    </div>
+    <div class="about-card">
+      <h3>&#128274; THE FILES</h3>
+      <p>Hundreds of pages of declassified Pentagon, CIA, and military documents. Photographs. Radar data. Witness reports. All legally obtained from official government sources and available for every holder to download — for free.</p>
+    </div>
+    <div class="about-card">
+      <h3>&#9728; THE COMMUNITY</h3>
+      <p>Truth-seekers. Degen-believers. Moonboys with clearance. If you've ever looked up at the sky and wondered — welcome home. $WGUFO is the most redpilled token on Solana.</p>
+    </div>
+    <div class="about-card">
+      <h3>&#128200; THE TOKENOMICS</h3>
+      <p>Launched fair on Pump.fun. No team allocation. No VC bags. No private sale. Just vibes, aliens, and the free market deciding what the truth is worth. Fully community-owned from block zero.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- MARKETCAP -->
+<section id="marketcap">
+  <div class="section-title">// SIGNAL ACQUIRED</div>
+  <h2 class="section-heading">LIVE MARKET DATA</h2>
+  <div class="mc-panel">
+    <div style="font-size:0.7rem;letter-spacing:0.15em;color:rgba(0,255,136,0.45);margin-bottom:0.5rem;">PUMP.FUN CONTRACT ADDRESS</div>
+    <div class="ca-box">
+      <div class="ca-label">CA:</div>
+      <div class="ca-value" id="ca-display">F5tfztTnE4sYsMhZT5KrFpWvHmYSfJZoRjCuxKPbpump</div>
+      <button class="copy-btn" onclick="copyCA()">&#9112; COPY</button>
+    </div>
+    <div class="mc-grid">
+      <div class="mc-stat">
+        <div class="mc-stat-label">MARKET CAP</div>
+        <div class="mc-stat-value green" id="mc-marketcap">$69,420</div>
+      </div>
+      <div class="mc-stat">
+        <div class="mc-stat-label">PRICE USD</div>
+        <div class="mc-stat-value cyan" id="mc-price">$0.00000069</div>
+      </div>
+      <div class="mc-stat">
+        <div class="mc-stat-label">VOLUME 24H</div>
+        <div class="mc-stat-value green" id="mc-volume">$12,345</div>
+      </div>
+      <div class="mc-stat">
+        <div class="mc-stat-label">24H CHANGE</div>
+        <div class="mc-stat-value green" id="mc-change">+420.69%</div>
+      </div>
+    </div>
+    <p style="margin-top:1.5rem;font-size:0.65rem;color:rgba(0,255,136,0.3);text-align:center;letter-spacing:0.1em;">
+      
+    </p>
+  </div>
+</section>
+
+<hr class="divider">
+
+
+<!-- GALLERY -->
+<section id="gallery">
+  <div class="section-title">// VISUAL EVIDENCE</div>
+  <h2 class="section-heading">ALIEN IMAGE GALLERY</h2>
+  <p style="font-size:0.8rem;color:rgba(0,255,136,0.55);margin-bottom:1.5rem;line-height:1.8;">
+    Images sourced from official government releases. Click to enlarge. Share freely.
+  </p>
+  <div class="gallery-grid" id="gallery-grid">
+  </div>
+  <p style="font-size:0.65rem;color:rgba(0,255,136,0.3);letter-spacing:0.1em;margin-top:-0.5rem;">
+    &#9432; &nbsp;Add your image files to the gallery array in the script section below.
+  </p>
+</section>
+
+<hr class="divider">
+
+<!-- DOWNLOAD -->
+<section id="download">
+  <div class="section-title">// SECURE TRANSFER READY</div>
+  <h2 class="section-heading">DOWNLOAD THE TRUTH</h2>
+  <div class="download-panel">
+    <div class="download-size">TOTAL ARCHIVE SIZE: ~2.74 GB</div>
+    <div class="download-title">&#128274; COMPLETE UFO FILE DROP</div>
+    <a href="wargovufofiles.zip" class="download-btn" download>
+      &#11123; &nbsp;DOWNLOAD ALL FILES (.ZIP)
+    </a>
+    <div class="file-count" id="file-count-display">
+      CONTAINS: 161 FILES &nbsp;|&nbsp; FORMAT: ZIP &nbsp;|&nbsp; SOURCE: war.gov/UFO
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- HOW TO BUY -->
+<section id="buy">
+  <div class="section-title">// ACQUISITION PROTOCOL</div>
+  <h2 class="section-heading">HOW TO BUY $WGUFO</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <h3>&#128247; GET PHANTOM</h3>
+      <p>Download the Phantom wallet app or browser extension. Create your wallet and back up your seed phrase somewhere safe.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <h3>&#9728; GET SOLANA</h3>
+      <p>Buy SOL on Coinbase, Binance, or Kraken. Send it to your Phantom wallet address to fund your bag.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <h3>&#128279; GO TO PUMP.FUN</h3>
+      <p>Visit pump.fun and search for <strong>WAR GOV UFO</strong> or paste the contract address directly into the search bar.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">04</div>
+      <h3>&#128640; BUY $WGUFO</h3>
+      <p>Connect your wallet, enter the amount of SOL you want to spend, confirm the transaction, and welcome to the resistance.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div style="font-size:2rem;margin-bottom:0.75rem;">&#128760;</div>
+  <p>
+    $WGUFO is a meme coin for entertainment purposes. Not financial advice.<br>
+    Government files are legally obtained public domain / FOIA-released materials.<br>
+    &copy; 2026 WAR GOV UFO &nbsp;|&nbsp; The truth was always free.
+  </p>
+  <p style="margin-top:1rem;">
+    <a href="https://pump.fun" style="color:rgba(0,255,136,0.4);text-decoration:none;margin:0 0.5rem;">PUMP.FUN</a>
+    <a href="https://dexscreener.com" style="color:rgba(0,255,136,0.4);text-decoration:none;margin:0 0.5rem;">DEXSCREENER</a>
+    <a href="https://t.me/WGUFO" style="color:rgba(0,255,136,0.4);text-decoration:none;margin:0 0.5rem;">TELEGRAM</a>
+    <a href="https://twitter.com" style="color:rgba(0,255,136,0.4);text-decoration:none;margin:0 0.5rem;">TWITTER/X</a>
+  </p>
+</footer>
+
+<script>
+/* STARS */
+const starsEl = document.getElementById('stars');
+for (let i = 0; i < 180; i++) {
+  const s = document.createElement('div');
+  s.className = 'star';
+  const sz = Math.random() * 2.5 + 0.5;
+  s.style.cssText = `width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;--d:${(Math.random()*3+1.5).toFixed(1)}s;animation-delay:${(Math.random()*3).toFixed(1)}s;`;
+  starsEl.appendChild(s);
+}
+
+/* =====================================================================
+   GALLERY CONFIG — add your actual image file paths/URLs here
+   ===================================================================== */
+const galleryImages = [
+  { src: 'images/fbi-photo-a1.png', caption: 'fbi-photo-a1' },
+  { src: 'images/fbi-photo-a2.png', caption: 'fbi-photo-a2' },
+  { src: 'images/fbi-photo-a3.png', caption: 'fbi-photo-a3' },
+  { src: 'images/fbi-photo-a4.png', caption: 'fbi-photo-a4' },
+  { src: 'images/fbi-photo-a5.png', caption: 'fbi-photo-a5' },
+  { src: 'images/fbi-photo-a6.png', caption: 'fbi-photo-a6' },
+  { src: 'images/fbi-photo-a7.png', caption: 'fbi-photo-a7' },
+  { src: 'images/fbi-photo-a8.png', caption: 'fbi-photo-a8' },
+  { src: 'images/NASA-UAP-VM1, Apollo 12, 1969.jpg', caption: 'NASA-UAP-VM1, Apollo 12, 1969' },
+  { src: 'images/NASA-UAP-VM2, Apollo 12, 1969.jpg', caption: 'NASA-UAP-VM2, Apollo 12, 1969' },
+  { src: 'images/NASA-UAP-VM3, Apollo 12, 1969.jpg', caption: 'NASA-UAP-VM3, Apollo 12, 1969' },
+  { src: 'images/NASA-UAP-VM4, Apollo 12, 1969.jpg', caption: 'NASA-UAP-VM4, Apollo 12, 1969' },
+  { src: 'images/NASA-UAP-VM5, Apollo 12, 1969.jpg', caption: 'NASA-UAP-VM5, Apollo 12, 1969' },
+  { src: 'images/NASA-UAP-VM6, Apollo 17, 1972.jpg', caption: 'NASA-UAP-VM6, Apollo 12, 1969' },
+  
+];
+
+const grid = document.getElementById('gallery-grid');
+galleryImages.forEach((img, i) => {
+  const item = document.createElement('div');
+  item.className = 'gallery-item';
+  item.onclick = () => openLightbox(img.src, img.caption);
+  if (img.src) {
+    item.innerHTML = `<img src="${img.src}" alt="${img.caption}"><div class="gallery-caption">${img.caption}</div>`;
+  } else {
+    item.innerHTML = `<div class="gallery-placeholder"><span style="font-size:2.5rem">&#128444;</span><span>IMAGE ${String(i+1).padStart(2,'0')}</span><span style="font-size:0.5rem;margin-top:0.3rem;color:rgba(0,255,136,0.2)">ADD YOUR FILE PATH</span></div><div class="gallery-caption">${img.caption}</div>`;
+  }
+  grid.appendChild(item);
+});
+
+/* LIGHTBOX */
+function openLightbox(src, cap) {
+  if (!src) return;
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox-cap').textContent = cap;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+document.getElementById('lightbox').addEventListener('click', function(e) {
+  if (e.target === this) closeLightbox();
+});
+
+/* COPY CA */
+function copyCA() {
+  const ca = document.getElementById('ca-display').textContent;
+  navigator.clipboard.writeText(ca).catch(() => {});
+  const btn = document.querySelector('.copy-btn');
+  btn.textContent = '&#10003; COPIED';
+  setTimeout(() => { btn.innerHTML = '&#9112; COPY'; }, 2000);
+}
+
+/* =====================================================================
+   LIVE MARKET DATA — DexScreener API
+   Replace CONTRACT_ADDRESS with your actual Pump.fun token CA
+   ===================================================================== */
+const CONTRACT_ADDRESS = 'F5tfztTnE4sYsMhZT5KrFpWvHmYSfJZoRjCuxKPbpump';
+
+async function fetchMarketData() {
+  if (CONTRACT_ADDRESS.includes('PASTE')) {
+    // Demo mode — animated placeholder numbers
+    animateDemoNumbers();
+    return;
+  }
+  try {
+    const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${CONTRACT_ADDRESS}`);
+    const data = await res.json();
+    const pair = data.pairs?.[0];
+    if (!pair) return;
+
+    const mc = pair.fdv ? '$' + formatNum(pair.fdv) : 'N/A';
+    const price = pair.priceUsd ? '$' + parseFloat(pair.priceUsd).toFixed(10).replace(/0+$/, '') : 'N/A';
+    const vol = pair.volume?.h24 ? '$' + formatNum(pair.volume.h24) : 'N/A';
+    const chg = pair.priceChange?.h24;
+    const chgStr = chg !== undefined ? (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%' : 'N/A';
+
+    document.getElementById('mc-marketcap').textContent = mc;
+    document.getElementById('mc-price').textContent = price;
+    document.getElementById('mc-volume').textContent = vol;
+    document.getElementById('mc-change').textContent = chgStr;
+    document.getElementById('mc-change').style.color = chg >= 0 ? 'var(--green)' : 'var(--red)';
+
+    document.getElementById('tick-mc').textContent = mc;
+    document.getElementById('tick-price').textContent = price;
+    document.getElementById('tick-change').textContent = chgStr;
+    document.getElementById('tick-change').style.color = chg >= 0 ? 'var(--green)' : 'var(--red)';
+  } catch(e) {
+    console.log('Market data fetch failed', e);
+  }
+}
+
+function formatNum(n) {
+  if (n >= 1e9) return (n/1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return (n/1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return (n/1e3).toFixed(1) + 'K';
+  return n.toFixed(0);
+}
+
+function animateDemoNumbers() {
+  // Simulated live-ish numbers for demo
+  const mcVals = ['$42,069', '$51,337', '$69,420', '$88,888', '$100,001'];
+  let i = 0;
+  setInterval(() => {
+    const mc = mcVals[i % mcVals.length];
+    document.getElementById('mc-marketcap').textContent = mc;
+    document.getElementById('tick-mc').textContent = mc;
+    i++;
+  }, 4000);
+
+  document.getElementById('tick-mc').textContent = '$69,420';
+  document.getElementById('tick-price').textContent = '$0.000000069';
+  document.getElementById('tick-change').textContent = '+420.69%';
+  document.getElementById('tick-holders').textContent = '1,337';
+  document.getElementById('mc-holders').textContent = '1,337';
+}
+
+fetchMarketData();
+setInterval(fetchMarketData, 30000);
+</script>
+</body>
+</html>
